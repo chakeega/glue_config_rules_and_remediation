@@ -10,7 +10,7 @@ There are also remediation lambdas in this package.
 
 Please note that the Security Configuration remediating actions require creating a new KMS Key and a new security configuration. The remediation will then swap the previous security configuration for the newly created secure one. 
 
-## Steps
+## Deployment Steps
 1. Upload the entire 'Lambdas' Folder into an S3 bucket - so you have keys like bucket-name/Lambdas/codefile.py.zip
 2. Update the template's S3BucketName parameter to your S3 bucket name
 3. Create stacks from the CloudFormation templates in the CloudFormation folder
@@ -41,3 +41,8 @@ Please note that the Security Configuration remediating actions require creating
 
 > aws cloudformation create-stack --stack-name glueCrawlerSSL --template-body file://glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM
 
+# Demo Requirements
+> * Glue Job without a security configuration or one without S3 or CloudWatch encryption
+> * Glue Crawler without a security configuration or one without S3 or CloudWatch encryption
+> * Glue Connection to JDBC/MongoDb without SSL enforced
+> * Unencrypted Passwords or Metadata for Glue Data Catalog
