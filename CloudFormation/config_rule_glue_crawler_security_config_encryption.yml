@@ -6,7 +6,6 @@ Parameters:
   S3BucketName:
     Type: String
     Description: Name of the S3 bucket where the Lambda Code is uploaded as a Zip file
-    Default: cfn-scripts2
 
   S3KeyPrefixComplianceCheck:
     Type: String

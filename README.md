@@ -1,30 +1,28 @@
 # AWS GLUE SECURITY CONFIG RULES
- This Config Conformance Pack enforces security best practices for the AWS Glue Service. It contains the following:
+ This Config Conformance Pack enforces some security best practices for the AWS Glue Service. It contains the following:
  1. Glue Job Security Configuration is encrypted for S3 and CloudWatch
  2. Glue Crawler Security Configuration is encrypted for S3 and CloudWatch 
  3. Glue Data Catalog's metadata and passwords are encrypted
  4. Glue Connection requires SSL
  5. An SNS topic for notifications of Glue Job failures
 
-There are also remediation lambdas in this package.
-
-Please note that the Security Configuration remediating actions require creating a new KMS Key and a new security configuration. The remediation will then swap the previous security configuration for the newly created secure one. 
+There are also manually triggered remediation lambdas in this package.
 
 ## Deployment Steps
-1. Upload the entire 'Lambdas' Folder into an S3 bucket - so you have keys like bucket-name/Lambdas/codefile.py.zip
-2. Update the template's S3BucketName parameter to your S3 bucket name
-3. Create stacks from the CloudFormation templates in the CloudFormation folder
+1. Upload the entire 'Lambdas' Folder into an S3 bucket - which will give you URIs in the format s3://bucket-name/Lambdas/codefile.py.zip - and use this bucket name for each S3 parameter.
+2. Create stacks from the CloudFormation templates in the CloudFormation folder
 
 ## Drawbacks
 - Enforcing Glue Connection SSL will only apply to JDBC or MongoDb connections
+- The Security Configuration remediating actions require creating a new KMS Key and a new security configuration which is then swapped with the existing one.
 
-# Demo Requirements
+## Demo Requirements
 * Glue Job without a security configuration or one without S3 or CloudWatch encryption
 * Glue Crawler without a security configuration or one without S3 or CloudWatch encryption
 * Glue Connection to JDBC/MongoDb without SSL enforced
 * Unencrypted Passwords or Metadata for Glue Data Catalog
 
-# CLI Commands to Create Templates
+## CLI Commands to Create Templates
 **Job Security Config Check**
 > aws cloudformation delete-stack --stack-name glueJobSecurityConfigEncryption
 

@@ -6,17 +6,16 @@ Parameters:
   S3BucketName:
     Type: String
     Description: Name of the S3 bucket where the Lambda Code is uploaded as a Zip file
-    Default: cfn-scripts2
 
   S3KeyPrefixComplianceCheck:
     Type: String
     Description: S3 prefix path for Compliance Check Lambda function including the Zip file name
-    Default: Lambdas/config_rule_glue_encrypt_data_catalog.py.zip
+    Default: Lambdas/config_rule_glue_crawler_enforce_connection_ssl.py.zip
 
   S3KeyPrefixRemediation:
     Type: String
     Description: S3 prefix path for remediation Lambda function including the Zip file name
-    Default: Lambdas/remediate_data_catalog_encryption.py.zip
+    Default: Lambdas/remediate_connection_ssl.py.zip
   
 Resources:
   GlueLambdaExecutionRole:
@@ -36,7 +35,7 @@ Resources:
           - sts:AssumeRole
       Path: "/"
       Policies:
-      - PolicyName: Glue_Data_Catalog_Encryption_Config_Rule_Permission
+      - PolicyName: Enfore_Glue_Crawler_Connection_SSL_Config_Rule_Permission
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -47,61 +46,66 @@ Resources:
             Action:
               - config:PutEvaluations
               - config:GetComplianceDetailsByConfigRule
-              - glue:PutDataCatalogEncryptionSettings
-              - glue:GetDataCatalogEncryptionSettings
-              - kms:TagResource
-              - kms:CreateKey
-              - kms:ScheduleKeyDeletion
-              - kms:Encrypt
+              - glue:GetCrawler
+              - glue:GetCrawlers
+              - glue:UpdateCrawler
+              - glue:GetConnections
+              - glue:GetConnection
+              - glue:CreateConnection
+              - glue:UpdateConnection
               - iam:PassRole
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey
+              - kms:DescribeKey
             Resource: '*'
   
-  GlueDataCatalogComplianceCheck:
+  GlueCrawlerSSLComplianceCheck:
     Type: AWS::Lambda::Function
     Properties:
-      Description: Function to check compliance with GlueDataCatalogEncryptionConfigRule
+      Description: Function to check compliance with GlueCrawlerSSLConfigRule
       Code:
         S3Bucket: !Ref S3BucketName
         S3Key: !Ref S3KeyPrefixComplianceCheck
-      FunctionName: GlueDataCatalog_ComplianceCheck
+      FunctionName: GlueCrawlerSSL_ComplianceCheck
       Role: !GetAtt GlueLambdaExecutionRole.Arn
       Runtime: python3.8
-      Handler: config_rule_glue_encrypt_data_catalog.lambda_handler
+      Handler: config_rule_glue_crawler_enforce_connection_ssl.lambda_handler
       Timeout: 15 #seconds
 
   ConfigPermissionToCallLambda:
     Type: AWS::Lambda::Permission
     Properties:
-      FunctionName: !GetAtt GlueDataCatalogComplianceCheck.Arn
+      FunctionName: !GetAtt GlueCrawlerSSLComplianceCheck.Arn
       Action: "lambda:InvokeFunction"
       Principal: "config.amazonaws.com"
       SourceAccount: !Ref 'AWS::AccountId'
 
-  GlueDataCatalogEncryptionConfigRule:
+  GlueCrawlerSSLConfigRule:
     Type: AWS::Config::ConfigRule
     Properties:
-      Description: This rule checks whether the Glue datacatalog metadata and passwords are encrypted`
-      ConfigRuleName: Glue_Data_Catalog_Is_Encrypted
+      Description: This rule checks whether glue crawle to MongoDb and JDBC enfore SSL
+      ConfigRuleName: Enfore_Glue_Crawler_Connection_Via_SSL
       MaximumExecutionFrequency: TwentyFour_Hours #Allowed values: One_Hour | Six_Hours | Three_Hours | Twelve_Hours | TwentyFour_Hours
       Source:
         Owner: "CUSTOM_LAMBDA"
         SourceDetails:
           - EventSource: "aws.config"
             MessageType: "ConfigurationItemChangeNotification"
-        SourceIdentifier: !GetAtt GlueDataCatalogComplianceCheck.Arn
+        SourceIdentifier: !GetAtt GlueCrawlerSSLComplianceCheck.Arn
     DependsOn: ConfigPermissionToCallLambda
 
-  GlueDataCatalogRemediation:
+  GlueCrawlerSSLRemediation:
     Type: AWS::Lambda::Function
     Properties:
-      Description: Function to remediate GlueDataCatalogEncryption ConfigRule
+      Description: Function to remediate GlueCrawlerSSL ConfigRule
       Code:
         S3Bucket: !Ref S3BucketName
         S3Key: !Ref S3KeyPrefixRemediation
-      FunctionName: GlueDataCatalog_Remediation
+      FunctionName: GlueCrawlerSSL_Remediation
       Role: !GetAtt GlueLambdaExecutionRole.Arn
       Runtime: python3.8
-      Handler: remediate_data_catalog_encryption.lambda_handler
+      Handler: remediate_connection_ssl.lambda_handler
       Timeout: 15 #seconds
 
   RemediationSSMDoc:
@@ -109,7 +113,7 @@ Resources:
     Properties:
       DocumentType: Automation  
       Content:
-        description: This document invokes the glue data catalog encryption remdiation function 
+        description: This document invokes the remdiation function to enfore SSL on a Glue connection
         schemaVersion: '0.3' #automation documents use this version
         parameters: 
           ResourceId:
@@ -122,29 +126,29 @@ Resources:
           timeoutSeconds: 60
           onFailure: Abort
           inputs:
-            FunctionName: !Ref GlueDataCatalogRemediation
+            FunctionName: !Ref GlueCrawlerSSLRemediation
             Payload: |-
               {
                 "ResourceId": "{{ ResourceId }}"
               }
       
-  GlueDataCatalogRemediationConfiguration:
+  GlueCrawlerSSLRemediationConfiguration:
     Type: AWS::Config::RemediationConfiguration
     Properties: 
       Automatic: False
-      ConfigRuleName: !Ref GlueDataCatalogEncryptionConfigRule
+      ConfigRuleName: !Ref GlueCrawlerSSLConfigRule
       Parameters:
         ResourceId:
           ResourceValue:
             Value: "RESOURCE_ID"
       TargetId: !Ref RemediationSSMDoc
       TargetType: "SSM_DOCUMENT"
-    DependsOn: GlueDataCatalogRemediation
+    DependsOn: GlueCrawlerSSLRemediation
 
 Outputs:
   RemediationLambda: 
-    Value: !Ref GlueDataCatalogRemediation
+    Value: !Ref GlueCrawlerSSLRemediation
   ComplianceCheckLambda:
-    Value: !Ref GlueDataCatalogComplianceCheck
+    Value: !Ref GlueCrawlerSSLComplianceCheck
   RemediationSSMDoc:
     Value: !Ref RemediationSSMDoc
