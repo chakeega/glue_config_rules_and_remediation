@@ -8,12 +8,11 @@ def lambda_handler(event, context):
     glue_client = boto3.client('glue')
     
     #get connection type because its required for update_connection
-    response = glue_client.get_connection(Name=connection_name, HidePassword=True)
+    response = glue_client.get_connection(Name=connection_name, HidePassword=False)
     connection_type = response['Connection']['ConnectionType']
     connection_properties = response['Connection']['ConnectionProperties']
-    connection_properties['JDBC_ENFORCE_SSL'] = 'true' #overwrite to enfore ssl
-    print(connection_properties)
-    
+    connection_properties["JDBC_ENFORCE_SSL"] = "true" #overwrite to enfore ssl
+
     glue_client.update_connection(
         Name=connection_name,
         ConnectionInput= {
@@ -22,5 +21,3 @@ def lambda_handler(event, context):
             'ConnectionProperties' : connection_properties
         }
     )
-
-lambda_handler({'ResourceId': 'test2123123'}, 0)
