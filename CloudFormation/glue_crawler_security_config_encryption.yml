@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates an aws custom config rule that checks glue crawlers for S3 and CloudWatch encryption 
+            along with a remediation
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: Name of the S3 bucket where the Lambda Code is uploaded as a Zip file
+    Default: cfn-scripts2
+
+  S3KeyPrefixComplianceCheck:
+    Type: String
+    Description: S3 prefix path for Compliance Check Lambda function including the Zip file name
+    Default: Lambdas/config_rule_glue_crawler_security_configuration_is_encrypted.py.zip
+
+  S3KeyPrefixRemediation:
+    Type: String
+    Description: S3 prefix path for remediation Lambda function including the Zip file name
+    Default: Lambdas/remediate_crawler_security_config_encryption.py.zip
+  
+Resources:
+  GlueLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Tags:
+        - Key: Description
+          Value: !Sub Lambda role for compliance check - ${AWS::StackName}
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: Glue_Crawler_Security_Configuration_Encrypted_Config_Rule_Permission
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action: logs:*
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+              - config:PutEvaluations
+              - config:GetComplianceDetailsByConfigRule
+              - glue:GetCrawler
+              - glue:GetCrawlers
+              - glue:CreateSecurityConfiguration
+              - glue:CreateConnection
+              - glue:UpdateConnection
+              - glue:UpdateCrawler
+              - glue:PutDataCatalogEncryptionSettings
+              - glue:GetSecurityConfiguration
+              - kms:TagResource
+              - kms:CreateKey
+              - kms:ScheduleKeyDeletion
+              - kms:Encrypt
+              - iam:PassRole
+            Resource: '*'
+  
+  GlueCrawlerSecurityConfigComplianceCheck:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Function to check compliance with GlueCrawlerSecurityConfigEncryptionConfigRule
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3KeyPrefixComplianceCheck
+      FunctionName: GlueCrawlerSecurityConfig_ComplianceCheck
+      Role: !GetAtt GlueLambdaExecutionRole.Arn
+      Runtime: python3.8
+      Handler: config_rule_glue_crawler_security_configuration_is_encrypted.lambda_handler
+      Timeout: 15 #seconds
+
+  ConfigPermissionToCallLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt GlueCrawlerSecurityConfigComplianceCheck.Arn
+      Action: "lambda:InvokeFunction"
+      Principal: "config.amazonaws.com"
+      SourceAccount: !Ref 'AWS::AccountId'
+
+  GlueCrawlerSecurityConfigEncryptionConfigRule:
+    Type: AWS::Config::ConfigRule
+    Properties:
+      Description: This rule checks whether glue crawlers have S3 and CloudWatch encryption enabled in their security configurations
+      ConfigRuleName: Glue_Crawler_Security_Configuration_Is_Encrypted
+      MaximumExecutionFrequency: TwentyFour_Hours #Allowed values: One_Hour | Six_Hours | Three_Hours | Twelve_Hours | TwentyFour_Hours
+      Source:
+        Owner: "CUSTOM_LAMBDA"
+        SourceDetails:
+          - EventSource: "aws.config"
+            MessageType: "ConfigurationItemChangeNotification"
+        SourceIdentifier: !GetAtt GlueCrawlerSecurityConfigComplianceCheck.Arn
+    DependsOn: ConfigPermissionToCallLambda
+
+  GlueCrawlerSecurityConfigRemediation:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Function to remediate GlueCrawlerSecurityConfigEncryption ConfigRule
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3KeyPrefixRemediation
+      FunctionName: GlueCrawlerSecurityConfig_Remediation
+      Role: !GetAtt GlueLambdaExecutionRole.Arn
+      Runtime: python3.8
+      Handler: remediate_crawler_security_config_encryption.lambda_handler
+      Timeout: 15 #seconds
+
+  RemediationSSMDoc:
+    Type: AWS::SSM::Document
+    Properties:
+      DocumentType: Automation  
+      Content:
+        description: This document invokes the glue crawler security configuration remdiation function 
+        schemaVersion: '0.3' #automation documents use this version
+        parameters: 
+          ResourceId:
+            type: String
+            description: Name of non compliant resource
+        mainSteps:
+        - name: invokeRemediationFunction
+          action: aws:invokeLambdaFunction
+          maxAttempts: 3 
+          timeoutSeconds: 60
+          onFailure: Abort
+          inputs:
+            FunctionName: !Ref GlueCrawlerSecurityConfigRemediation
+            Payload: |-
+              {
+                "ResourceId": "{{ ResourceId }}"
+              }
+      
+  GlueCrawlerSecurityConfigRemediationConfiguration:
+    Type: AWS::Config::RemediationConfiguration
+    Properties: 
+      Automatic: False
+      ConfigRuleName: !Ref GlueCrawlerSecurityConfigEncryptionConfigRule
+      Parameters:
+        ResourceId:
+          ResourceValue:
+            Value: "RESOURCE_ID"
+      TargetId: !Ref RemediationSSMDoc
+      TargetType: "SSM_DOCUMENT"
+    DependsOn: GlueCrawlerSecurityConfigRemediation
+
+Outputs:
+  RemediationLambda: 
+    Value: !Ref GlueCrawlerSecurityConfigRemediation
+  ComplianceCheckLambda:
+    Value: !Ref GlueCrawlerSecurityConfigComplianceCheck
+  RemediationSSMDoc:
+    Value: !Ref RemediationSSMDoc

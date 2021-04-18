@@ -1,0 +1,104 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: This creates an SNS topic, explicit policy for cloudwatch events and then an events rule to notify you on failure of any of the glue jobs that you specificy. 
+
+Parameters:
+  MyGlueJob:
+    Type: String
+    Description: Please enter your Glue job's name. You can enter multiple names if separated by commas. 
+
+Resources:
+  CreateKMSKey:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: KMS Key created with CloudFormation Template
+      Enabled: true
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: KmsKeyPolicy
+        Statement:
+          - Sid: SimpleKeyPolicy
+            Effect: Allow
+            Principal:
+              AWS: !Ref "AWS::AccountId"
+            Action:
+              - 'kms:*'
+            Resource: '*'
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub
+        - ${StackName}--alarms-topic
+        - { StackName: !Ref "AWS::StackName" }
+      DisplayName: !Sub
+        - ${StackName}--alarms-topic
+        - { StackName: !Ref "AWS::StackName" }
+      KmsMasterKeyId: !Ref CreateKMSKey
+
+  AlarmTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: CloudWatchEvents
+        Statement:
+          - Sid: EventsToSNS
+            # This allows CW Events to push messages to SNS
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: SNS:Publish
+            Resource: !Ref AlarmTopic
+          - Sid: DefaultSNS
+            # This is the default Statement
+            Effect: Allow
+            Principal:
+              AWS: !Ref "AWS::AccountId"
+            Action:
+              - SNS:GetTopicAttributes
+              - SNS:SetTopicAttributes
+              - SNS:AddPermission
+              - SNS:RemovePermission
+              - SNS:DeleteTopic
+              - SNS:Subscribe
+              - SNS:ListSubscriptionsByTopic
+              - SNS:Publish
+              - SNS:Receive
+            Resource: !Ref AlarmTopic
+            Condition:
+              StringEquals:
+                AWS:SourceOwner: !Ref "AWS::AccountId"
+      Topics:
+        - !Ref AlarmTopic
+
+  MyGlueJobFailEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: This rule is to detect if the Glue Jobs fails
+      EventPattern:
+        source:
+          - aws.glue
+        detail-type:
+          # It should be exactly like this.
+          - Glue Job State Change
+        detail:
+          jobName:
+            - !Ref MyGlueJob
+          state:
+            - FAILED
+      Name: !Sub
+        - ${StackName}-fail-event
+        - { StackName: !Ref "AWS::StackName" }
+      State: ENABLED
+      Targets:
+        - Arn: !Ref AlarmTopic
+          Id: !GetAtt AlarmTopic.TopicName
+
+Outputs:
+  SNSTopic:
+    Description: The ARN of the SNS topic for Glue job failures
+    Export:
+      Name: SNSTopic
+    Value: !Ref AlarmTopic
