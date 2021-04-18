@@ -22,18 +22,22 @@ Please note that the Security Configuration remediating actions require creating
 # CLI Commands to Create Templates
 **Job Security Config Check**
 > aws cloudformation delete-stack --stack-name glueJobSecurityConfigEncryption
+
 > aws cloudformation create-stack --stack-name glueJobSecurityConfigEncryption --template-body file://glue_job_security_config_encryption.yml --capabilities CAPABILITY_IAM
 
 
 **Crawler Security Config Check**
 > aws cloudformation delete-stack --stack-name glueCrawlerSecurityConfigEncryption
+
 > aws cloudformation create-stack --stack-name glueCrawlerSecurityConfigEncryption --template-body file://glue_crawler_security_config_encryption.yml --capabilities CAPABILITY_IAM
 
 **Data Catalog Encrypted**
 > aws cloudformation delete-stack --stack-name glueDataCatalogEncrypted
+
 > aws cloudformation create-stack --stack-name glueDataCatalogEncrypted --template-body file://glue_encrypt_data_catalog.yml --capabilities CAPABILITY_IAM
 
 **Crawler SSL Check**
 > aws cloudformation delete-stack --stack-name glueCrawlerSSL
+
 > aws cloudformation create-stack --stack-name glueCrawlerSSL --template-body file://glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM
 
