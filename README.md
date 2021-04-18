@@ -42,7 +42,7 @@ Please note that the Security Configuration remediating actions require creating
 > aws cloudformation create-stack --stack-name glueCrawlerSSL --template-body file://glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM
 
 # Demo Requirements
-> * Glue Job without a security configuration or one without S3 or CloudWatch encryption
-> * Glue Crawler without a security configuration or one without S3 or CloudWatch encryption
-> * Glue Connection to JDBC/MongoDb without SSL enforced
-> * Unencrypted Passwords or Metadata for Glue Data Catalog
+* Glue Job without a security configuration or one without S3 or CloudWatch encryption
+* Glue Crawler without a security configuration or one without S3 or CloudWatch encryption
+* Glue Connection to JDBC/MongoDb without SSL enforced
+* Unencrypted Passwords or Metadata for Glue Data Catalog
