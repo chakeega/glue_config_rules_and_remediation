@@ -1,4 +1,4 @@
-import boto3, sys, datetime, botocore, json
+import boto3, sys, datetime, botocore, json, os
 try:
     import liblogging
 except ImportError:
@@ -7,13 +7,6 @@ except ImportError:
 ##############
 # Parameters #
 ##############
-
-####### BOTH EVENT BASED AND PERIODIC!!!
-# -create or update glue job, cralwer or connection
-# you get the name of the resources
-# periodic as well
-# return a specific message to define the resource name in the state 
-
 
 # Define the default resource to report to Config Rules
 DEFAULT_RESOURCE_TYPE = 'AWS::Glue::Crawler'

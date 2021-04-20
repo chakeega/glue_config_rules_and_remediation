@@ -1,4 +1,4 @@
-import boto3, sys, datetime, botocore, json
+import boto3, sys, datetime, botocore, json, os
 
 ##############
 # Parameters #

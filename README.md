@@ -7,11 +7,10 @@
  5. An SNS topic for notifications of Glue Job failures
 
 There are also manually triggered remediation lambdas in this package.
-
 ## Deployment Steps
-1. Upload the entire 'Lambdas' Folder into an S3 bucket - which will give you URIs in the format s3://bucket-name/Lambdas/codefile.py.zip - and use this bucket name for each S3 parameter.
+1. Upload the entire 'Lambdas' Folder into an S3 bucket - which will give you URIs in the format s3://bucket-name/Lambdas/codefile.py.zip - and use this bucket name for each S3 parameter. 
 2. Create stacks from the CloudFormation templates in the CloudFormation folder
-
+**[CLI COMMANDS BELOW]**
 ## Drawbacks
 - Enforcing Glue Connection SSL will only apply to JDBC or MongoDb connections
 - The Security Configuration remediating actions require creating a new KMS Key and a new security configuration which is then swapped with the existing one.
@@ -23,24 +22,42 @@ There are also manually triggered remediation lambdas in this package.
 * Unencrypted Passwords or Metadata for Glue Data Catalog
 
 ## CLI Commands to Create Templates
+**Upload Lambdas to S3**
+> aws s3 cp Lambdas/ s3://cfn-scripts2/Lambdas/ --recursive
+
 **Job Security Config Check**
-> aws cloudformation delete-stack --stack-name glueJobSecurityConfigEncryption
-
-> aws cloudformation create-stack --stack-name glueJobSecurityConfigEncryption --template-body file://glue_job_security_config_encryption.yml --capabilities CAPABILITY_IAM
-
+> aws cloudformation create-stack --stack-name glueJobSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_job_security_config_encryption.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
 **Crawler Security Config Check**
-> aws cloudformation delete-stack --stack-name glueCrawlerSecurityConfigEncryption
-
-> aws cloudformation create-stack --stack-name glueCrawlerSecurityConfigEncryption --template-body file://glue_crawler_security_config_encryption.yml --capabilities CAPABILITY_IAM
+> aws cloudformation create-stack --stack-name glueCrawlerSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
 **Data Catalog Encrypted**
-> aws cloudformation delete-stack --stack-name glueDataCatalogEncrypted
-
-> aws cloudformation create-stack --stack-name glueDataCatalogEncrypted --template-body file://glue_encrypt_data_catalog.yml --capabilities CAPABILITY_IAM
+> aws cloudformation create-stack --stack-name glueDataCatalogEncrypted --template-body file://CloudFormation/config_rule_glue_encrypt_data_catalog.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
 **Crawler SSL Check**
-> aws cloudformation delete-stack --stack-name glueCrawlerSSL
+> aws cloudformation create-stack --stack-name glueCrawlerConnectionSSL --template-body file://CloudFormation/config_rule_glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
-> aws cloudformation create-stack --stack-name glueCrawlerSSL --template-body file://glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM
+**Glue Job Failure SNS Notification**
+> aws cloudformation create-stack --stack-name glueJobFailureNotification --template-body file://CloudFormation/sns_notification_for_glue_job_failure.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=MyGlueJob,ParameterValue=<glue-job-names>
+
+
+******* 
+
+# To Do 
+* replace cfn-scripts2 with <s3-bucket-here> in cli commands
+
+aws cloudformation delete-stack --stack-name glueJobSecurityConfigEncryption
+aws cloudformation delete-stack --stack-name glueDataCatalogEncrypted
+aws cloudformation delete-stack --stack-name glueCrawlerConnectionSSL
+aws cloudformation delete-stack --stack-name glueCrawlerSecurityConfigEncryption
+
+aws cloudformation create-stack --stack-name glueJobSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_job_security_config_encryption.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
+
+aws cloudformation create-stack --stack-name glueDataCatalogEncrypted --template-body file://CloudFormation/config_rule_glue_encrypt_data_catalog.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
+
+aws cloudformation create-stack --stack-name glueCrawlerConnectionSSL --template-body file://CloudFormation/config_rule_glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
+
+
+aws cloudformation create-stack --stack-name glueCrawlerSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_crawler_security_config_encryption.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
+
 

@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: This template creates an aws custom config rule that checks glue crawlers for S3 and CloudWatch encryption 
-            along with a remediation
+Description: This template creates an aws custom config rule that checks glue crawlers enforce ssl for their connections
 
 Parameters:
   S3BucketName:

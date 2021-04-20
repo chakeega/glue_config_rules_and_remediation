@@ -1,67 +1,6 @@
-import boto3, sys, datetime, botocore, json, os
-try:
-    import liblogging
-except ImportError:
-    pass
-
-##############
-# Parameters #
-##############
-
-# Define the default resource to report to Config Rules
-DEFAULT_RESOURCE_TYPE = 'AWS::Glue::Connection'
-
-# Set to True to get the lambda to assume the Role attached on the Config Service (useful for cross-account).
-ASSUME_ROLE_MODE = False
-
-# Other parameters (no change needed)
-CONFIG_ROLE_TIMEOUT_SECONDS = 900
-
-#############
-# Main Code #
-#############
-
-def get_all_glue_connections(glue_client):
-    all_connections = []
-    
-    connections = glue_client.get_connections()
-    all_connections += connections['ConnectionList']
-    
-    while True: 
-        if 'NextToken' in connections:
-            connections = glue_client.get_connections(NextToken=connections['NextToken'])
-            all_connections += connections['ConnectionList']
-        else:
-            break
-    
-    return all_connections
-    
-def evaluate_compliance(event, configuration_item, valid_rule_parameters):
-    glue_client = boto3.client('glue')
-    evaluations = []
-
-    all_connections = get_all_glue_connections(glue_client)
-
-    # No log group exists
-    if not all_connections:
-        return None
-    
-    for connection in all_connections:
-        if connection['ConnectionType'] == 'JDBC' or connection['ConnectionType'] == 'MONGODB':
-            #if encryption is not enabled for both then put into non-compliant evaluation
-            if connection['ConnectionProperties']['JDBC_ENFORCE_SSL'] != 'true':
-                evaluations.append(build_evaluation(connection['Name'],
-                                                    'NON_COMPLIANT',
-                                                    event,
-                                                    annotation="This connection doesn't require SSL"))
-            
-            else:
-                evaluations.append(build_evaluation(connection['Name'],
-                                    'COMPLIANT',
-                                    event,
-                                    annotation="This connection requires SSL"))
-    print(evaluations[0])
-    return evaluations
+########################################
+#   Boilerplate Code HELPER FUNCTIONS  #
+########################################
 
 def evaluate_parameters(rule_parameters):
     if 'KmsKeyId' not in rule_parameters:
@@ -72,9 +11,7 @@ def evaluate_parameters(rule_parameters):
 
     return rule_parameters
 
-####################
-# Helper Functions #
-####################
+
 
 # Build an error to be displayed in the logs when the parameter is invalid.
 def build_parameters_value_error_response(ex):
@@ -137,10 +74,6 @@ def build_evaluation_from_config_item(configuration_item, compliance_type, annot
     eval_ci['ComplianceType'] = compliance_type
     eval_ci['OrderingTimestamp'] = configuration_item['configurationItemCaptureTime']
     return eval_ci
-
-####################
-# Boilerplate Code #
-####################
 
 # Helper function used to validate input
 def check_defined(reference, reference_name):
@@ -365,4 +298,3 @@ def build_error_response(internal_error_message, internal_error_details=None, cu
     }
     print(error_response)
     return error_response
-

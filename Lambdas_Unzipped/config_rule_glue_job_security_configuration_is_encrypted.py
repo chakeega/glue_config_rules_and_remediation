@@ -1,11 +1,11 @@
-import boto3, sys, datetime, botocore, json
+import boto3, sys, datetime, botocore, json, os
 
 ##############
 # Parameters #
 ##############
 
 # Define the default resource to report to Config Rules
-DEFAULT_RESOURCE_TYPE = 'AWS::Glue::Job'
+DEFAULT_RESOURCE_TYPE =  'AWS::Glue::Job'
 
 # Set to True to get the lambda to assume the Role attached on the Config Service (useful for cross-account).
 ASSUME_ROLE_MODE = False
