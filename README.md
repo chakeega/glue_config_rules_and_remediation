@@ -23,7 +23,7 @@ There are also manually triggered remediation lambdas in this package.
 
 ## Deployment CLI Commands
 **Upload Lambdas to S3**
-> aws s3 cp Lambdas/ s3://<s3-bucket-here>/Lambdas/ --recursive
+> aws s3 cp Lambdas/ s3://<s3 bucket here>/Lambdas/ --recursive
 
 **Job Security Config Check**
 > aws cloudformation create-stack --stack-name glueJobSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_job_security_config_encryption.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=<s3-bucket-here>
