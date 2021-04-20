@@ -1,5 +1,5 @@
 # AWS GLUE SECURITY CONFIG RULES
- This Config Conformance Pack enforces some security best practices for the AWS Glue Service. It contains the following:
+ This repo contains AWS Config rules which enfore some security best practices for the AWS Glue Service. It contains the following:
  1. Glue Job Security Configuration is encrypted for S3 and CloudWatch
  2. Glue Crawler Security Configuration is encrypted for S3 and CloudWatch 
  3. Glue Data Catalog's metadata and passwords are encrypted
@@ -21,7 +21,7 @@ There are also manually triggered remediation lambdas in this package.
 * Glue Connection to JDBC/MongoDb without SSL enforced
 * Unencrypted Passwords or Metadata for Glue Data Catalog
 
-## CLI Commands to Create Templates
+## Deployment CLI Commands
 **Upload Lambdas to S3**
 > aws s3 cp Lambdas/ s3://cfn-scripts2/Lambdas/ --recursive
 
@@ -31,10 +31,10 @@ There are also manually triggered remediation lambdas in this package.
 **Crawler Security Config Check**
 > aws cloudformation create-stack --stack-name glueCrawlerSecurityConfigEncryption --template-body file://CloudFormation/config_rule_glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
-**Data Catalog Encrypted**
+**Data Catalog Encrypted Check**
 > aws cloudformation create-stack --stack-name glueDataCatalogEncrypted --template-body file://CloudFormation/config_rule_glue_encrypt_data_catalog.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
-**Crawler SSL Check**
+**Crawler Connection SSL Check**
 > aws cloudformation create-stack --stack-name glueCrawlerConnectionSSL --template-body file://CloudFormation/config_rule_glue_crawler_enforce_connection_ssl.yml --capabilities CAPABILITY_IAM --parameters ParameterKey=S3BucketName,ParameterValue=cfn-scripts2
 
 **Glue Job Failure SNS Notification**
